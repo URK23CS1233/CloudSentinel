@@ -1,149 +1,187 @@
 # CloudSentinel 🛰️
 
-> Lightweight, self-hosted distributed server monitoring dashboard.  
-> Inspired by Prometheus architecture. Built with FastAPI + Motor + React + Recharts.
+**Lightweight, self-hosted distributed server monitoring dashboard** inspired by Prometheus architecture.
 
----
+Real-time metrics collection, intelligent alerting, and rich visualizations for monitoring distributed nodes.
+
+## ✨ Features
+
+- 📊 **Real-time Metrics**: CPU, RAM, Disk usage for all nodes
+- 🚨 **Smart Alerts**: Deduplication, silencing, inhibition rules
+- 📈 **Rich Dashboard**: Live status cards, metric graphs with thresholds
+- 🔔 **Notifications**: Telegram bot integration for alerts
+- 🌐 **WebSocket Live Stream**: 5-second metric broadcasts
+- 💾 **30-day History**: Auto-cleanup metrics via TTL indexes
+- 🎛️ **Rule Management**: Per-node or global thresholds
+- ⚡ **High Performance**: Async FastAPI + Motor MongoDB
+
+## Tech Stack
+
+- **Backend**: FastAPI + Motor (async MongoDB) + Pydantic
+- **Frontend**: React 19 + TypeScript + Vite + Tailwind + shadcn/ui + Recharts
+- **Agent**: Python + psutil
+- **Database**: MongoDB (Atlas cloud or Docker)
 
 ## 🏗️ Architecture
 
 ```
-Agent (psutil) → FastAPI Backend → MongoDB Atlas → React Dashboard
-                     ↕  WebSocket  ↕
-                  Frontend (Vite)
+Agent (psutil)     Agent (psutil)       Agent (psutil)
+  ↓                   ↓                    ↓
+GET metrics → FastAPI Backend ← Telegram Bot
+             (WebSocket broadcast every 5s)
+             Motor async client
+                    ↓
+            MongoDB Atlas
+      (nodes, metrics, alerts, rules)
 ```
 
----
+## 🚀 Quickstart (5 min)
 
-## ⚡ Quick Start
+### Prerequisites
 
-### 1. MongoDB Atlas
-1. Create a free M0 cluster at [mongodb.com/atlas](https://mongodb.com/atlas)
-2. Create a DB user and allow `0.0.0.0/0` access
-3. Copy your connection string
+- Python 3.10+
+- Node.js 18+
+- MongoDB (free cluster at [mongodb.com/atlas](https://mongodb.com/atlas))
 
----
+### Setup
 
-### 2. Backend
+**Backend**
 
 ```bash
 cd backend
 python -m venv venv
-# Windows: venv\Scripts\activate
-# Mac/Linux: source venv/bin/activate
+source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-```
-
-Create `backend/.env`:
-```
-MONGODB_URL=mongodb+srv://user:pass@cluster.mongodb.net/cloudsentinel
-TELEGRAM_BOT_TOKEN=        # Optional
-TELEGRAM_CHAT_ID=          # Optional
-```
-
-Run:
-```bash
+cp .env.example .env      # Edit with your MongoDB URL
 uvicorn main:app --reload
-# → http://localhost:8000
-# → http://localhost:8000/docs  (Swagger UI)
 ```
 
----
-
-### 3. Agent (on every server you want to monitor)
+**Agent** (on each server to monitor)
 
 ```bash
 cd agent
 pip install psutil requests
+API_URL=http://localhost:8000 python monitor_agent.py
 ```
 
-Set `API_URL` env var (or edit `monitor_agent.py` default):
-```bash
-# Windows
-set API_URL=http://your-backend:8000
-python monitor_agent.py
-
-# Linux/Mac
-API_URL=http://your-backend:8000 python monitor_agent.py
-```
-
-The agent will:
-- Auto-register itself with the backend on startup
-- Send metrics every 10 seconds
-- Persist its `node_id` in `agent_id.txt`
-- Reconnect with exponential backoff if server unreachable
-
----
-
-### 4. Frontend
+**Frontend**
 
 ```bash
 cd frontend
-cp .env.example .env
-# Edit .env: set VITE_API_URL=http://localhost:8000
 npm install
-npm run dev
-# → http://localhost:5173
+npm run dev  # http://localhost:5173
 ```
 
----
+✅ Backend: http://localhost:8000 | Docs: http://localhost:8000/docs
 
-## 🚀 Deployment (Free Tier)
+## 📚 Full Documentation
 
-| Layer | Service | Free |
-|---|---|---|
-| Frontend | Vercel | ✅ |
-| Backend | Render.com | ✅ |
-| Database | MongoDB Atlas | ✅ |
+See **[SETUP.md](SETUP.md)** for detailed setup, deployment, API reference, architecture, and troubleshooting.
 
-### Deploy Backend to Render
-1. Push this repo to GitHub
-2. Go to [render.com](https://render.com) → New Web Service
-3. Connect repo → use `backend/render.yaml`
-4. Set env vars: `MONGODB_URL`, optionally `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
+## 📊 Dashboard Pages
 
-### Deploy Frontend to Vercel
-```bash
-cd frontend
-vercel deploy
-# Set env: VITE_API_URL=https://your-backend.onrender.com
-```
+| Page            | Features                                                    |
+| --------------- | ----------------------------------------------------------- |
+| **Dashboard**   | Stat cards, node grid with live metrics, color-coded status |
+| **Node Detail** | Time-series graphs, threshold lines, recent alerts          |
+| **Alerts**      | Table view, severity filter, silence/resolve actions        |
+| **Rules**       | Create thresholds per-node or globally, delete rules        |
 
-> ⚠️ Render free tier sleeps after 15 min of inactivity.  
-> Use [UptimeRobot](https://uptimerobot.com) to ping your `/health` endpoint every 5 min.
+## 🔔 Alert Features
 
----
+✅ **Deduplication** — same alert type won't fire >1x per 5min per node  
+✅ **Inhibition** — skip metric alerts if node offline  
+✅ **Silencing** — mute for 15min/1h/4h/24h  
+✅ **Telegram** — instant notifications if configured
 
-## 🔔 Alert System
+## 🚀 Free Deployment
 
-- **Rules**: configurable per-node or global thresholds
-- **Deduplication**: same alert type won't fire more than once per 5 minutes per node
-- **Inhibition**: metric alerts suppressed when node is offline
-- **Silencing**: silence an alert for 15min / 1h / 4h / 24h
-- **Telegram**: set `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` for instant notifications
+| Layer    | Service                                    | Free |
+| -------- | ------------------------------------------ | ---- |
+| Backend  | [Render.com](https://render.com)           | ✅   |
+| Frontend | [Vercel](https://vercel.com)               | ✅   |
+| Database | [MongoDB Atlas](https://mongodb.com/atlas) | ✅   |
 
----
+**→ See [SETUP.md](SETUP.md) for deployment steps**
 
 ## 📁 Project Structure
 
 ```
-CloudSentinel/
+.
 ├── backend/
-│   ├── main.py          # FastAPI app + WebSocket
-│   ├── database.py      # Motor + indexes
-│   ├── models.py        # Pydantic models
-│   ├── alert_engine.py  # Alert logic
-│   ├── routes/
-│   │   ├── nodes.py
-│   │   ├── metrics.py
-│   │   └── alerts.py
+│   ├── main.py                 # FastAPI + WebSocket
+│   ├── database.py             # Motor + indexes
+│   ├── models.py               # Pydantic schemas
+│   ├── alert_engine.py         # Alert evaluation
+│   ├── routes/                 # {nodes, metrics, alerts}.py
 │   └── requirements.txt
+├── agent/
+│   └── monitor_agent.py        # psutil metrics sender
 ├── frontend/
-│   └── src/
-│       ├── pages/       # Dashboard, NodeDetail, Alerts, Rules
-│       ├── components/  # NodeCard, MetricsChart, AlertsPanel, Sidebar
-│       ├── hooks/       # useMetrics.ts (React Query)
-│       └── lib/         # api.ts, types.ts, utils.ts
-└── agent/
-    └── monitor_agent.py
+│   ├── src/
+│   │   ├── pages/              # {Dashboard, Alerts, Rules, NodeDetail}.tsx
+│   │   ├── components/         # {NodeCard, MetricsChart, AlertsPanel}.tsx
+│   │   ├── hooks/              # useMetrics.ts (React Query)
+│   │   ├── lib/                # {api, types, utils}.ts
+│   │   └── App.tsx
+│   └── vite.config.ts
+├── SETUP.md                    # Detailed documentation
+└── README.md
 ```
+
+## 🔗 API Endpoints
+
+```
+GET    /nodes
+GET    /nodes/{node_id}
+POST   /nodes/register
+PUT    /nodes/{node_id}/status
+
+POST   /metrics/ingest
+GET    /metrics/{node_id}?range=1h|6h|24h
+GET    /metrics/{node_id}/latest
+GET    /metrics/summary/all
+
+GET    /alerts?node_id=X&severity=critical
+POST   /alerts/{id}/resolve
+POST   /alerts/{id}/silence?duration_minutes=60
+GET    /alerts/rules
+POST   /alerts/rules
+DELETE /alerts/rules/{id}
+
+WS     /ws/metrics
+GET    /health
+```
+
+## 📖 Configuration
+
+**Backend** (`backend/.env`)
+
+```env
+MONGODB_URL=mongodb+srv://user:pass@cluster.mongodb.net/cloudsentinel
+TELEGRAM_BOT_TOKEN=          # optional
+TELEGRAM_CHAT_ID=            # optional
+```
+
+**Frontend** (`frontend/.env`)
+
+```env
+VITE_API_URL=http://localhost:8000
+```
+
+**Agent** (`agent/.env`)
+
+```env
+API_URL=http://localhost:8000
+SEND_INTERVAL=10  # seconds
+```
+
+## 🆘 Support
+
+📖 **Setup Help**: See [SETUP.md](SETUP.md)  
+🔍 **API Docs**: http://localhost:8000/docs  
+🐛 **Issues**: Report on GitHub
+
+---
+
+**Built for monitoring distributed systems easily and efficiently.**
